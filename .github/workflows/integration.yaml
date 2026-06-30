@@ -233,7 +233,7 @@ jobs:
           echo $pid > $vm.pid
           network_config=/Users/runner/.vmnet-helper/vms/$vm/network-config
           timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config)
+          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
           echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
           if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
               echo >&2 "Timeout waiting for $vm_ip"
@@ -253,7 +253,7 @@ jobs:
           echo $pid > $vm.pid
           network_config=$HOME/.vmnet-helper/vms/$vm/network-config
           timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config)
+          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
           echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
           if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
               echo >&2 "Timeout waiting for $vm_ip"
@@ -273,7 +273,7 @@ jobs:
           echo $pid > $vm.pid
           network_config=/Users/runner/.vmnet-helper/vms/$vm/network-config
           timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config)
+          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
           echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
           if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
               echo >&2 "Timeout waiting for $vm_ip"
