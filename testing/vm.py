@@ -161,7 +161,11 @@ class VM:
             except OSError as e:
                 self.check_running()
                 logging.debug("Connect %s: %s", address, e)
-                if e.errno == errno.EHOSTDOWN:
+                if e.errno not in [
+                    errno.EHOSTDOWN,
+                    errno.EHOSTUNREACH,
+                    errno.ECONNREFUSED,
+                ]:
                     time.sleep(5)
 
         self.check_running()
