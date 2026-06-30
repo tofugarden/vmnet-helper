@@ -147,6 +147,7 @@ def create_network_config(vm):
     }
     if vm.ip_address:
         data["ethernets"]["eth0"]["addresses"] = [str(vm.ip_address)]
+        data["ethernets"]["eth0"]["optional"] = True
     path = store.vm_path(vm.vm_name, "network-config")
     with open(path, "w") as f:
         yaml.dump(data, f, sort_keys=False)
