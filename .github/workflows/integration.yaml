@@ -266,7 +266,7 @@ jobs:
               --driver ${{ matrix.driver }} \
               --connection ${{ matrix.connection }} \
               --operation-mode host \
-              --network-id ${{ env.shared_network_id }} \
+              --network-id ${{ env.isolated_network_id }} \
               --timeout 300 \
               --verbose &
           pid=$!
