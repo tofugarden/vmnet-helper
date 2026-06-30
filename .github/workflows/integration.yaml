@@ -173,6 +173,27 @@ jobs:
     env:
       shared_network_id: c04ad4ac-5e49-4774-a5c9-86f5101b54d4
       isolated_network_id: e72bdf39-b477-47fe-b449-62bc2da53e08
+      vm_cmd: |
+        .venv/bin/python3 ./run $vm \
+            --driver ${{ matrix.driver }} \
+            --connection ${{ matrix.connection }} \
+            --operation-mode host \
+            --network-id $network_id \
+            --timeout 300 \
+            --verbose &
+        pid=$!
+        echo $pid > $vm.pid
+        network_config=$HOME/.vmnet-helper/vms/$vm/network-config
+        timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
+        vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
+        echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
+      vm_wait_cmd: |
+        if ! timeout 300s bash -c \
+            "until nc -z $(eval "echo \$${vm}_ip") 22 2>/dev/null; do sleep 5; done"
+        then
+            echo >&2 "Timeout waiting for $test0_ip"
+            exit 1
+        fi
     steps:
       - name: Host info
         run: |
@@ -220,65 +241,30 @@ jobs:
           sudo dscacheutil -flushcache
           sudo killall -HUP mDNSResponder
       - name: Start VM test0
+        env:
+          vm: test0
+          network_id: ${{ env.shared_network_id }}
         run: |
-          vm=test0
-          .venv/bin/python3 ./run $vm \
-              --driver ${{ matrix.driver }} \
-              --connection ${{ matrix.connection }} \
-              --operation-mode host \
-              --network-id ${{ env.shared_network_id }} \
-              --timeout 300 \
-              --verbose &
-          pid=$!
-          echo $pid > $vm.pid
-          network_config=/Users/runner/.vmnet-helper/vms/$vm/network-config
-          timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
-          echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
-          if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
-              echo >&2 "Timeout waiting for $vm_ip"
-              exit 1
-          fi
-      - name: Start VM test1
-        run: |
-          vm=test1
-          .venv/bin/python3 ./run $vm \
-              --driver ${{ matrix.driver }} \
-              --connection ${{ matrix.connection }} \
-              --operation-mode host \
-              --network-id ${{ env.shared_network_id }} \
-              --timeout 300 \
-              --verbose &
-          pid=$!
-          echo $pid > $vm.pid
-          network_config=$HOME/.vmnet-helper/vms/$vm/network-config
-          timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
-          echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
-          if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
-              echo >&2 "Timeout waiting for $vm_ip"
-              exit 1
-          fi
-      - name: Start VM test2
-        run: |
-          vm=test2
-          .venv/bin/python3 ./run $vm \
-              --driver ${{ matrix.driver }} \
-              --connection ${{ matrix.connection }} \
-              --operation-mode host \
-              --network-id ${{ env.isolated_network_id }} \
-              --timeout 300 \
-              --verbose &
-          pid=$!
-          echo $pid > $vm.pid
-          network_config=/Users/runner/.vmnet-helper/vms/$vm/network-config
-          timeout 180s bash -c "until test -e $network_config 2>/dev/null; do sleep 5; done"
-          vm_ip=$(yq -r '.ethernets.eth0.addresses[0]' $network_config | cut -d '/' -f 1)
-          echo "${vm}_ip=$vm_ip" >> $GITHUB_ENV
-          if ! timeout 300s bash -c "until nc -z $vm_ip 22 2>/dev/null; do sleep 5; done"; then
-              echo >&2 "Timeout waiting for $vm_ip"
-              exit 1
-          fi
+          ${{ env.vm_cmd }}
+      - parallel:
+          - name: Wait for VM test0
+            env:
+              vm: test0
+            run: ${{ env.vm_wait_cmd }}
+          - name: Start VM test1
+            env:
+              vm: test1
+              network_id: ${{ env.shared_network_id }}
+            run: |
+              ${{ env.vm_cmd }}
+              ${{ env.vm_wait_cmd }}
+          - name: Start VM test2
+            env:
+              vm: test2
+              network_id: ${{ env.isolated_network_id }}
+            run: |
+              ${{ env.vm_cmd }}
+              ${{ env.vm_wait_cmd }}
       - name: Ping from test0 to test1
         run: ssh -o StrictHostKeyChecking=no ubuntu@$test0_ip ping -t 10 -c 5 $test1_ip
       - name: ping from test1 to test2
