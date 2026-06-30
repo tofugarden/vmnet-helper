@@ -134,7 +134,7 @@ def create_network_config(vm):
                 "match": {
                     "macaddress": vm.mac_address,
                 },
-                "dhcp4": True,
+                "dhcp4": vm.ip_address is None,
                 "dhcp-identifier": "mac",
                 "dhcp4-overrides": {
                     "use-dns": False,
