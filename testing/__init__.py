@@ -25,3 +25,4 @@ from .vm import (
     DRIVERS,
 )
 from .mac import address_from as mac_address_from
+from .net import validate_network_options, private_ipv4_address
